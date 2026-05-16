@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// нейрона - идея ясна но про горутину не додумался
 func CheckID(ctx context.Context, conn *pgx.Conn) {
 	tiki := time.NewTicker(5 * time.Minute)
 	defer tiki.Stop()

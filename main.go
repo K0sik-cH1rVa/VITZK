@@ -18,6 +18,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(users.Users)
 } //end//
+// ДАТТЕБАЁ
 func main() {
 	// создаем контекст Background:
 	ctx := context.Background()
@@ -48,7 +49,6 @@ func main() {
 		json_request.AddUser(w, r, conn)
 	})
 
-	
 	// 2) И только после этого финальный запуск сервера:
 	fmt.Println("Запускаю http сервер на порту :8080...")
 	//настраиваем http-сервер//
