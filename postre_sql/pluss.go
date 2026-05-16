@@ -1,5 +1,5 @@
 // нейрона тк не шарю за умные $, хотя идея была не столь отдалена
-package users
+package postre_sql
 
 import (
 	"context"
@@ -11,8 +11,7 @@ func UpdateRowHours(ctx context.Context, conn *pgx.Conn, name string, hours int)
 	sqlQuery := `
 	UPDATE users
 	SET workhours = workhours + $1
-	WHERE name = $2`
-
+	WHERE name = $2;`
 	_, err := conn.Exec(ctx, sqlQuery, hours, name)
 	return err
 }

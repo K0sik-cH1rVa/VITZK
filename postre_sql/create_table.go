@@ -1,4 +1,4 @@
-package users
+package postre_sql
 
 import (
 	"context"

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"ychba/postre_sql"
 	"ychba/users"
 
 	"github.com/jackc/pgx/v5"
@@ -21,7 +22,7 @@ type UserRequest struct {
 	Update    bool   `json:"update"`
 }
 
-func CreateUserHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func AddWorkHours(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Проверяем, что это POST запрос
 	if r.Method != http.MethodPost {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
@@ -43,14 +44,14 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	ctx := r.Context()
 
 	// Вы вставляете пользователя через обычный InsertRow
-	err = users.InsertRow(ctx, conn, newUser.Name, newUser.Age, newUser.WorkHours, newUser.Post)
+	err = postre_sql.InsertRow(ctx, conn, newUser.Name, newUser.Age, newUser.WorkHours, newUser.Post)
 
 	if err != nil {
 		// Проверяем код ошибки PostgreSQL (23505 — это дубликат уникального ключа/имени)
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 
 			// ЮЗЕР СУЩЕСТВУЕТ! Вызываем функцию обновления часов с вашего экрана
-			err = users.UpdateRowHours(ctx, conn, newUser.Name, newUser.WorkHours)
+			err = postre_sql.UpdateRowHours(ctx, conn, newUser.Name, newUser.WorkHours)
 			if err != nil {
 				http.Error(w, "Ошибка обновления часов: "+err.Error(), http.StatusInternalServerError)
 				return
@@ -67,20 +68,22 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 			return
 		}
 	}
+	//адская нейрона
+	dbUsers, err := users.GetAllUsers(r.Context(), conn)
+	if err != nil {
+		http.Error(w, "Ошибка чтения из БД: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	// Если ошибки не было — значит юзер создался впервые
-	fmt.Printf("Успешно создан НОВЫЙ пользователь: %s\n", newUser.Name)
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Пользователь успешно создан!"))
+	// ПУНКТ 4: Настраиваем заголовок ответа, что мы отправляем именно JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated) // или http.StatusOK
+
+	// ПУНКТ 3: Маршалинг (превращение массива в JSON-текст) и отправка в Postman разом
+	err = json.NewEncoder(w).Encode(dbUsers)
+	if err != nil {
+		http.Error(w, "Ошибка кодирования JSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 }
-
-//err = users.InsertRow(ctx, conn, newUser.Name, newUser.Age, newUser.WorkHours, newUser.Post)
-//if err != nil {
-// 		http.Error(w, "ошибка сохранения в БД"+err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	fmt.Printf("Успешно добавлен пользователь: %s\n", newUser.Name)
-// 	// Отправляем ответ клиенту
-// 	w.WriteHeader(http.StatusCreated)
-// 	w.Write([]byte("Пользователь успешно обработан!"))
-// //}

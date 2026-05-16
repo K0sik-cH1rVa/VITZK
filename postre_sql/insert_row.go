@@ -1,4 +1,4 @@
-package users
+package postre_sql
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 // 2) начинаем не с id, а с name тк в postgreSQL у нас id !!!SERIAL!!! PRIMARY KEY(этот пункт заполнит БД сама)
 // 3) сначала пишем INSERT INTO потом название таблицы куда хотим вставить новую запись и в () перечисляем названия столбцов  и пишем key_word "VALUES" и в () передаем значение для каждого столбца!
 // 4) пишем умных долларов потому что потому!
-// 5) ласт строчка чтоб часы складывались
 func InsertRow(
 	ctx context.Context,
 	conn *pgx.Conn,
@@ -21,9 +20,9 @@ func InsertRow(
 	sqlQuery := `
 	INSERT INTO users (name, age, workhours, post)
 	VALUES($1, $2, $3, $4);`
-	//отдельно пишем названия столбцов
+	// 1) отдельно пишем названия столбцов
+	// 2) эта строка берет conn, текст sqlQuery и передает туда переменные Name - $1 etc.
+	// 3) БД выполняет эту команду, создавая физическую строку на диске
 	_, err := conn.Exec(ctx, sqlQuery, Name, Age, WorkHours, Post)
 	return err
 }
-//ON CONFLICT (name)
-	//DO UPDATE SET workhours = users.workhours + EXCLUDED.workhours;

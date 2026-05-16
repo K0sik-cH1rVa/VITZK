@@ -1,4 +1,4 @@
- package sql_create
+package postre_sql
 
 import (
 	"context"

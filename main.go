@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 	"ychba/json_request"
-	"ychba/sql_create"
+	"ychba/postre_sql"
 	"ychba/users"
 )
 
@@ -18,22 +17,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	//нейрона//
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(users.Users)
-	go func() {
-		if svc != nil {
-			_ = svc.Shutdown(context.Background())
-		}
-	}()
 } //end//
 func main() {
 	// создаем контекст Background:
 	ctx := context.Background()
 	//Connect принимает контекст и возвращает созданное подключени к БД/ошибку
-	conn, err := sql_create.Connect(ctx)
+	conn, err := postre_sql.Connect(ctx)
 	if err != nil {
 		panic(err)
 	}
 	//создаем таблицу с юзерами
-	err = users.CreateTable(ctx, conn)
+	err = postre_sql.CreateTable(ctx, conn)
 	if err != nil {
 		panic(err)
 	}
@@ -47,32 +41,26 @@ func main() {
 	http.HandleFunc("/anal", Handler)
 
 	//2/3) норм ребята, еще и в консоли приятность и вкусность делают(помимо закидывания типов в БД)
-	http.HandleFunc("/bebra", func(w http.ResponseWriter, r *http.Request) {
-		json_request.CreateUserHandler(w, r, conn)
+	http.HandleFunc("/api/addUser/addWorkHours", func(w http.ResponseWriter, r *http.Request) {
+		json_request.AddWorkHours(w, r, conn)
 	})
-	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
-		json_request.CreateUserHandler(w, r, conn)
+	http.HandleFunc("/api/addUser", func(w http.ResponseWriter, r *http.Request) {
+		json_request.AddUser(w, r, conn)
 	})
 
-	//запускаем горутину
-	go sql_create.CheckBd(ctx, conn)
-	fmt.Println("Запуск горутины", time.Now())
+	
 	// 2) И только после этого финальный запуск сервера:
 	fmt.Println("Запускаю http сервер на порту :8080...")
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Все окацси!")
-
 	//настраиваем http-сервер//
 	//инициализируем глобальную переменную чтобы != nil//
 	svc = &http.Server{Addr: ":8080"}
 
+	//запускаем горутину - нейрона
+	go postre_sql.CheckID(ctx, conn)
+
 	//Запускаем сервер через эту переменную//
-	if err = svc.ListenAndServe(); err != http.ErrServerClosed {
+	if err := svc.ListenAndServe(); err != http.ErrServerClosed {
 		fmt.Println("Произошла ошибка :(", err.Error())
 		return
 	}
-	fmt.Println("Сервер остановлен.")
 }
