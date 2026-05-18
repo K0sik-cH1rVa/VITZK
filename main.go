@@ -2,65 +2,59 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"ychba/json_request"
-	"ychba/postre_sql"
-	"ychba/users"
+
+	"ychba/database"
+	"ychba/handlers"
+
+	"github.com/joho/godotenv"
 )
 
-// глобальная переменная сервера
-var svc *http.Server
-
-func Handler(w http.ResponseWriter, r *http.Request) {
-	//нейрона//
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(users.Users)
-} //end//
-// ДАТТЕБАЁ
 func main() {
-	// создаем контекст Background:
+	err := godotenv.Load() // Загрузит .env
+	if err != nil {
+		log.Println("Файл .env не найден, используем системные переменные")
+	}
+
 	ctx := context.Background()
-	//Connect принимает контекст и возвращает созданное подключени к БД/ошибку
-	conn, err := postre_sql.Connect(ctx)
+
+	// 1. Подключаемся к БД и создаем пул соединений
+	pool, err := database.Connect(ctx)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	//создаем таблицу с юзерами
-	err = postre_sql.CreateTable(ctx, conn)
+	defer pool.Close()
+
+	// 2. Создаем таблицу с юзерами
+	err = database.CreateTable(ctx, pool)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
+
 	fmt.Println("Успешно подключились к БД :)")
-	//записываем ВСЕХ наших имеющихся юзеров - нейрона(не знал как закинуть всех+)
-	err = users.InsertAllUsers(ctx, conn, users.Users)
-	if err != nil {
-		panic(err)
-	}
-	//1) - выводит на экран по ссылке в браузере 3 юзера а остальных новых в бд стирает :(
-	http.HandleFunc("/anal", Handler)
 
-	//2/3) норм ребята, еще и в консоли приятность и вкусность делают(помимо закидывания типов в БД)
-	http.HandleFunc("/api/addUser/addWorkHours", func(w http.ResponseWriter, r *http.Request) {
-		json_request.AddWorkHours(w, r, conn)
-	})
-	http.HandleFunc("/api/addUser", func(w http.ResponseWriter, r *http.Request) {
-		json_request.AddUser(w, r, conn)
+	// 3. Записываем ВСЕХ наших имеющихся юзеров
+	// err = users.InsertAllUsers(ctx, pool, users.Users)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// 4. Настраиваем http-эндпоинты
+	http.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
+		handlers.AddUser(w, r, pool)
 	})
 
-	// 2) И только после этого финальный запуск сервера:
+	http.HandleFunc("/api/users/hours", func(w http.ResponseWriter, r *http.Request) {
+		handlers.AddWorkHours(w, r, pool)
+	})
+
+	// 5. Запуск сервера
 	fmt.Println("Запускаю http сервер на порту :8080...")
-	//настраиваем http-сервер//
-	//инициализируем глобальную переменную чтобы != nil//
-	svc = &http.Server{Addr: ":8080"}
+	svc := &http.Server{Addr: ":8080"}
 
-	//запускаем горутину - нейрона
-	go postre_sql.CheckID(ctx, conn)
-
-	//Запускаем сервер через эту переменную//
-	if err := svc.ListenAndServe(); err != http.ErrServerClosed {
-		fmt.Println("Произошла ошибка :(", err.Error())
-		return
+	if err := svc.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal("Сервер упал: ", err)
 	}
 }

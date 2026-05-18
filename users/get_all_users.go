@@ -1,17 +1,17 @@
-//нейрочип мне в анус!
+// нейрочип мне в анус!
 package users
 
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func GetAllUsers(ctx context.Context, conn *pgx.Conn) ([]user, error) {
+func GetAllUsers(ctx context.Context, pool *pgxpool.Pool) ([]user, error) {
 	sqlQuery := `
 	SELECT id, name, age, workhours, post FROM users;`
 	// метод Query отправляет текст запроса в Postgres, БД отдает его в rows
-	rows, err := conn.Query(ctx, sqlQuery)
+	rows, err := pool.Query(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +19,7 @@ func GetAllUsers(ctx context.Context, conn *pgx.Conn) ([]user, error) {
 	// allUsers - слайс-коробка и чтение через rows.Next()
 	var allUsers []user
 
-// Запускает цикл который идет по строкам в БД...
+	// Запускает цикл который идет по строкам в БД...
 	for rows.Next() {
 		var u user // Временная пустая структура для одной строки
 

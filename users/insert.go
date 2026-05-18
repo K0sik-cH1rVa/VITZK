@@ -5,10 +5,11 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // InsertAllUsers принимает весь слайс пользователей и отправляет в БД одним запросом
-func InsertAllUsers(ctx context.Context, conn *pgx.Conn, allUsers []user) error {
+func InsertAllUsers(ctx context.Context, pool *pgxpool.Pool, allUsers []user) error {
 	// Создаем таблицу (срез срезов) для массовой вставки
 	var rows [][]any
 
@@ -18,12 +19,14 @@ func InsertAllUsers(ctx context.Context, conn *pgx.Conn, allUsers []user) error 
 	}
 
 	// Команда CopyFrom отправляет все данные за один сетевой пакет
-	_, err := conn.CopyFrom(
+	_, err := pool.CopyFrom(
 		ctx,
 		pgx.Identifier{"users"}, // название таблицы
 		[]string{"name", "age", "workhours", "post"}, // Колонки в таблице
 		pgx.CopyFromRows(rows),                       // Данные для вставки
 	)
-
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }

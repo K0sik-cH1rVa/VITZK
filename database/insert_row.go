@@ -1,9 +1,9 @@
-package postre_sql
+package database
 
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // 1) тут мы будем принимать запросы от БД
@@ -12,7 +12,7 @@ import (
 // 4) пишем умных долларов потому что потому!
 func InsertRow(
 	ctx context.Context,
-	conn *pgx.Conn,
+	pool *pgxpool.Pool,
 	Name string,
 	Age int,
 	WorkHours int,
@@ -23,6 +23,6 @@ func InsertRow(
 	// 1) отдельно пишем названия столбцов
 	// 2) эта строка берет conn, текст sqlQuery и передает туда переменные Name - $1 etc.
 	// 3) БД выполняет эту команду, создавая физическую строку на диске
-	_, err := conn.Exec(ctx, sqlQuery, Name, Age, WorkHours, Post)
+	_, err := pool.Exec(ctx, sqlQuery, Name, Age, WorkHours, Post)
 	return err
 }
